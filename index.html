@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TrainChain — Réservation de Trains Décentralisée</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="abi.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">🚄</div>
+        <div class="logo-text">
+          <span class="logo-name">TrainChain</span>
+          <span class="logo-tagline">Blockchain Travel</span>
+        </div>
+      </div>
+
+      <nav class="main-nav">
+        <button class="tab-btn active" data-tab="trains">
+          <span class="tab-icon">🚆</span>
+          <span class="tab-label">Trains</span>
+        </button>
+        <button class="tab-btn" data-tab="reservation">
+          <span class="tab-icon">🎫</span>
+          <span class="tab-label">Mes billets</span>
+        </button>
+        <button class="tab-btn hidden" data-tab="admin" id="tabAdmin">
+          <span class="tab-icon">⚙️</span>
+          <span class="tab-label">Administration</span>
+        </button>
+      </nav>
+
+      <div class="header-actions">
+        <button class="theme-toggle" id="themeToggle" title="Changer le thème">☀️</button>
+        <button id="connectBtn">🔗 Connecter MetaMask</button>
+        <button class="user-avatar-btn" id="userAvatarBtn" title="Mon profil">👤</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══ HERO BANNER ═══ -->
+  <section class="hero active" id="heroBanner">
+    <div class="hero-inner">
+      <div class="hero-content">
+        <h2 class="hero-title">Voyagez en toute <span class="hero-accent">confiance</span></h2>
+        <p class="hero-subtitle">Réservez vos billets de train sur la blockchain Ethereum.<br>Transparent, sécurisé, décentralisé.</p>
+      </div>
+      <div class="hero-badges">
+        <div class="hero-badge">
+          <span class="hero-badge-icon">🔒</span>
+          <span class="hero-badge-text">Paiement sécurisé</span>
+        </div>
+        <div class="hero-badge">
+          <span class="hero-badge-icon">⚡</span>
+          <span class="hero-badge-text">Confirmation instantanée</span>
+        </div>
+        <div class="hero-badge">
+          <span class="hero-badge-icon">💸</span>
+          <span class="hero-badge-text">Remboursement garanti</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main>
+
+    <!-- ─── TAB: Trains ─── -->
+    <div class="tab-panel active" id="panel-trains">
+      <div class="content-wrapper">
+        <div class="section-header">
+          <h2 class="section-title">
+            🚆 Trains disponibles
+            <span class="train-count-badge" id="trainCountBadge"></span>
+          </h2>
+          <button class="btn btn-ghost btn-sm" id="refreshBtn">🔄 Actualiser</button>
+        </div>
+
+        <!-- Search & Filters -->
+        <div class="filter-bar" id="filterBar">
+          <div class="filter-search">
+            <span class="filter-search-icon">🔍</span>
+            <input type="text" id="searchName" placeholder="Rechercher un trajet (ex: Paris, Lyon, Marseille...)" />
+          </div>
+          <div class="filter-group">
+            <div class="filter-item">
+              <label>Prix min (ETH)</label>
+              <input type="number" id="filterMinPrice" placeholder="0" min="0" step="0.01" />
+            </div>
+            <div class="filter-item">
+              <label>Prix max (ETH)</label>
+              <input type="number" id="filterMaxPrice" placeholder="∞" min="0" step="0.01" />
+            </div>
+            <div class="filter-item">
+              <label>Places min.</label>
+              <input type="number" id="filterMinSeats" placeholder="0" min="0" />
+            </div>
+            <div class="filter-item filter-check">
+              <label class="checkbox-label">
+                <input type="checkbox" id="filterAvailable" />
+                <span>Disponibles uniquement</span>
+              </label>
+            </div>
+            <div class="filter-item filter-check">
+              <label class="checkbox-label">
+                <input type="checkbox" id="filterHideCancelled" checked />
+                <span>Masquer les annulés</span>
+              </label>
+            </div>
+            <div class="filter-item filter-check">
+              <label class="checkbox-label">
+                <input type="checkbox" id="filterHidePast" checked />
+                <span>Masquer les trajets passés</span>
+              </label>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="clearFiltersBtn">✕ Réinitialiser</button>
+          </div>
+        </div>
+
+        <div id="trainList">
+          <div class="empty-state">
+            <div class="empty-icon">🔌</div>
+            <p>Connectez MetaMask pour voir les trains disponibles.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── TAB: Mes billets ─── -->
+    <div class="tab-panel" id="panel-reservation">
+      <div class="content-wrapper">
+        <div class="page-header">
+          <div class="page-header-icon">🎫</div>
+          <div>
+            <h2 class="page-header-title">Rechercher des billets</h2>
+            <p class="page-header-desc">Consultez toutes les réservations d'un train en entrant son numéro</p>
+          </div>
+        </div>
+
+        <div id="myTrainsSection"></div>
+
+        <div class="search-card">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Numéro du train</label>
+              <input type="number" id="reservationTrainId" placeholder="ex: 1" min="1" />
+            </div>
+            <button class="btn btn-primary" id="checkReservationBtn">🔍 Rechercher</button>
+          </div>
+        </div>
+
+        <div id="reservationInfo"></div>
+      </div>
+    </div>
+
+    <!-- ─── TAB: Administration ─── -->
+    <div class="tab-panel" id="panel-admin">
+      <div class="content-wrapper">
+        <div class="page-header">
+          <div class="page-header-icon">⚙️</div>
+          <div>
+            <h2 class="page-header-title">Panneau d'administration</h2>
+            <p class="page-header-desc">Gérez les trains, remboursements et consultez les réservations</p>
+          </div>
+        </div>
+
+        <!-- Admin sub-navigation -->
+        <div class="admin-nav" id="adminNav">
+          <button class="admin-nav-btn active" data-panel="addTrainPanel">➕ Ajouter un train</button>
+          <button class="admin-nav-btn" data-panel="cancelTrainPanel">🚫 Annuler un train</button>
+          <button class="admin-nav-btn" data-panel="refundPanel">💰 Remboursements</button>
+          <button class="admin-nav-btn" data-panel="balancePanel">🏦 Solde</button>
+          <button class="admin-nav-btn" data-panel="adminReservationsPanel">📋 Réservations</button>
+        </div>
+
+        <!-- Ajouter un train -->
+        <div class="admin-section hidden" id="addTrainPanel">
+          <div class="admin-card">
+            <h3 class="admin-card-title">➕ Ajouter un nouveau train</h3>
+            <div class="add-train-form">
+              <div class="form-row">
+                <div class="form-group" style="flex:2;min-width:220px;">
+                  <label>Nom du trajet</label>
+                  <input type="text" id="trainName" placeholder="ex: Paris - Lyon" />
+                </div>
+                <div class="form-group">
+                  <label>Places</label>
+                  <input type="number" id="trainSeats" placeholder="100" min="1" />
+                </div>
+                <div class="form-group">
+                  <label>Prix (ETH)</label>
+                  <input type="number" id="trainPrice" placeholder="1" min="1" step="1" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group" style="flex:2;min-width:220px;">
+                  <label>Date & heure de départ</label>
+                  <input type="datetime-local" id="trainDeparture" />
+                </div>
+                <div class="form-group">
+                  <label>Durée (minutes)</label>
+                  <input type="number" id="trainDuration" placeholder="120" min="1" />
+                </div>
+              </div>
+              <div class="form-submit-row">
+                <button class="btn btn-primary btn-lg" id="addTrainBtn">🚄 Ajouter le train</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Annuler un train -->
+        <div class="admin-section hidden" id="cancelTrainPanel">
+          <div class="admin-card">
+            <h3 class="admin-card-title">🚫 Annuler un train</h3>
+            <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px;">Annuler un train rembourse automatiquement tous les passagers qui ont payé et ne sont pas encore remboursés.</p>
+            <button class="btn btn-ghost btn-sm" id="refreshCancelTrainsBtn" style="margin-bottom:12px;">🔄 Actualiser</button>
+            <div id="cancellableTrainsList"></div>
+          </div>
+        </div>
+
+        <!-- Gérer les remboursements -->
+        <div class="admin-section hidden" id="refundPanel">
+          <div class="admin-card">
+            <h3 class="admin-card-title">💰 Demandes de remboursement</h3>
+            <button class="btn btn-ghost btn-sm" id="refreshRefundsBtn" style="margin-bottom:12px;">🔄 Actualiser</button>
+            <div id="pendingRefundsList"></div>
+          </div>
+        </div>
+
+        <!-- Solde du contrat -->
+        <div class="admin-section hidden" id="balancePanel">
+          <div class="admin-card">
+            <h3 class="admin-card-title">🏦 Solde du contrat</h3>
+            <div class="balance-display" id="contractBalance">— ETH</div>
+            <button class="btn btn-ghost btn-sm" id="refreshBalanceBtn" style="margin-top:12px;">Actualiser le solde</button>
+          </div>
+        </div>
+
+        <!-- Réservations par train -->
+        <div class="admin-section hidden" id="adminReservationsPanel">
+          <div class="admin-card">
+            <h3 class="admin-card-title">📋 Toutes les réservations</h3>
+            <div class="form-row" style="margin-bottom:12px;">
+              <div class="form-group">
+                <label>ID du train</label>
+                <input type="number" id="adminResTrainId" placeholder="ex: 1" min="1" />
+              </div>
+              <button class="btn btn-primary btn-sm" id="loadAdminResBtn">Charger</button>
+            </div>
+            <div id="adminReservationsList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-col footer-brand-col">
+        <div class="footer-logo">
+          <span class="footer-logo-icon">🚄</span>
+          <span class="footer-logo-name">TrainChain</span>
+        </div>
+        <p class="footer-desc">Plateforme de réservation de trains décentralisée, propulsée par Ethereum et les Smart Contracts.</p>
+      </div>
+      <div class="footer-col">
+        <h4 class="footer-heading">Navigation</h4>
+        <ul class="footer-links">
+          <li><a href="#" onclick="switchTab('trains');window.scrollTo({top:0,behavior:'smooth'});return false;">Trains disponibles</a></li>
+          <li><a href="#" onclick="switchTab('reservation');window.scrollTo({top:0,behavior:'smooth'});return false;">Mes billets</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4 class="footer-heading">Technologie</h4>
+        <ul class="footer-links">
+          <li><span>Solidity ^0.8.19</span></li>
+          <li><span>Web3.js</span></li>
+          <li><span>MetaMask</span></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4 class="footer-heading">Informations</h4>
+        <ul class="footer-links">
+          <li><span>Projet académique</span></li>
+          <li><span>IMT — Blockchain S2</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 TrainChain — Projet IMT · Tous droits réservés</p>
+    </div>
+  </footer>
+
+  <!-- ═══ USER INFO MODAL ═══ -->
+  <div class="modal-backdrop" id="userModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>👤 Mon profil</h2>
+        <button class="modal-close" id="modalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="profile-row">
+          <span class="profile-label">Compte</span>
+          <span class="profile-value" id="modalAccount">-</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-label">Rôle</span>
+          <span class="profile-badge user" id="modalRole">-</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-label">Solde</span>
+          <span class="profile-value" id="modalBalance">-</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-label">Owner du contrat</span>
+          <span class="profile-value" id="modalOwner">-</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ REFUND PROPOSAL MODAL ═══ -->
+  <div class="modal-backdrop" id="refundProposalModal">
+    <div class="modal refund-modal">
+      <div class="modal-header">
+        <h2>💸 Demande de remboursement</h2>
+        <button class="modal-close" onclick="closeRefundProposal()">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align:center;">
+        <div class="refund-modal-icon">✅</div>
+        <p style="margin-bottom:8px;">Votre réservation pour le train <strong id="refundProposalTrainId"></strong> a été annulée.</p>
+        <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px;">Souhaitez-vous demander un remboursement ? L'administrateur devra valider votre demande.</p>
+        <div class="refund-modal-actions">
+          <button class="btn btn-warning" onclick="confirmRefundFromProposal()">💸 Oui, demander le remboursement</button>
+          <button class="btn btn-ghost" onclick="closeRefundProposal()">Non, plus tard</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODULAR SCRIPTS ═══ -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/tabs.js"></script>
+  <script src="js/modal.js"></script>
+  <script src="js/trainViz.js"></script>
+  <script src="js/trains.js"></script>
+  <script src="js/reservation.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/connection.js"></script>
+  <script src="js/init.js"></script>
+</body>
+</html>
